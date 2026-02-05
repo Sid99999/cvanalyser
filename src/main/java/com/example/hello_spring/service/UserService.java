@@ -25,13 +25,14 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
+
     @Transactional
     public User createUser(String username, String rawPassword) {
 
         User user = new User();
         user.setUsername(username);
 
-        // 🔐 HASH PASSWORD HERE
+        // 🔐 HASH PASSWORD
         String hashedPassword = passwordEncoder.encode(rawPassword);
         user.setPassword(hashedPassword);
 
@@ -43,5 +44,15 @@ public class UserService {
 
         return userRepository.save(user);
     }
-}
 
+    // =========================
+    // FETCH USER BY USERNAME (NEW)
+    // =========================
+    @Transactional(readOnly = true)
+    public User getByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() ->
+                        new RuntimeException("User not found: " + username)
+                );
+    }
+}
