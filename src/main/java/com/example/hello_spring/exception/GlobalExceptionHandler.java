@@ -2,6 +2,7 @@ package com.example.hello_spring.exception;
 
 import com.example.hello_spring.cv.exception.CvAccessDeniedException;
 import com.example.hello_spring.cv.exception.CvNotFoundException;
+import com.example.hello_spring.cv.exception.InvalidFileException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,6 +68,21 @@ public class GlobalExceptionHandler {
     }
 
     // =========================
+    // 400 – Invalid CV file upload
+    // =========================
+    @ExceptionHandler(InvalidFileException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidFile(InvalidFileException ex) {
+
+        log.warn("InvalidFileException: {}", ex.getMessage());
+
+        return buildError(
+                HttpStatus.BAD_REQUEST,
+                "Bad Request",
+                ex.getMessage()
+        );
+    }
+
+    // =========================
     // 401 – Bad credentials (LOGIN FAILURE)
     // =========================
     @ExceptionHandler(BadCredentialsException.class)
@@ -82,7 +98,7 @@ public class GlobalExceptionHandler {
     }
 
     // =========================
-    // 400 – Validation errors
+    // 400 – Bean validation errors
     // =========================
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationErrors(

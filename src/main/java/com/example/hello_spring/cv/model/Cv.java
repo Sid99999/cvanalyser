@@ -2,16 +2,23 @@ package com.example.hello_spring.cv.model;
 
 import com.example.hello_spring.model.User;
 import jakarta.persistence.*;
+
 import java.time.Instant;
 
 @Entity
 @Table(name = "cvs")
 public class Cv {
 
+    // =========================
+    // PRIMARY KEY
+    // =========================
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // =========================
+    // CV METADATA
+    // =========================
     @Column(nullable = false)
     private String title;
 
@@ -22,78 +29,97 @@ public class Cv {
     private String fileType;
 
     @Column(nullable = false)
+    private Long fileSize;
+
+    @Column(nullable = false)
     private String filePath;
 
+    // =========================
+    // AUDIT
+    // =========================
     @Column(nullable = false, updatable = false)
-    private Instant uploadedAt = Instant.now();
+    private Instant uploadedAt;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    // =========================
+    // OWNERSHIP
+    // =========================
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     private User owner;
 
-    // Constructors
-    public Cv() {}
-
-    public Cv(String title, String fileName, String fileType, String filePath, User owner) {
-        this.title = title;
-        this.fileName = fileName;
-        this.fileType = fileType;
-        this.filePath = filePath;
-        this.owner = owner;
+    // =========================
+    // CONSTRUCTOR (JPA ONLY)
+    // =========================
+    protected Cv() {
+        // Required by JPA
     }
 
-    // Getters & Setters (standard)
+    // =========================
+    // FACTORY METHOD
+    // =========================
+    public static Cv create(
+            String title,
+            String fileName,
+            String fileType,
+            Long fileSize,
+            User owner
+    ) {
+        Cv cv = new Cv();
+        cv.title = title;
+        cv.fileName = fileName;
+        cv.fileType = fileType;
+        cv.fileSize = fileSize;
+        cv.owner = owner;
+        return cv;
+    }
+
+    // =========================
+    // ENTITY LIFECYCLE
+    // =========================
+    @PrePersist
+    protected void onUpload() {
+        this.uploadedAt = Instant.now();
+    }
+
+    // =========================
+    // DOMAIN METHODS
+    // =========================
+    public void setFilePath(String filePath) {
+        this.filePath = filePath;
+    }
+
+    // =========================
+    // GETTERS
+    // =========================
+    public Long getId() {
+        return id;
+    }
 
     public String getTitle() {
         return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public Long getId() {
-        return id;
     }
 
     public String getFileName() {
         return fileName;
     }
 
-    public void setFileName(String fileName) {
-        this.fileName = fileName;
-    }
-
     public String getFileType() {
         return fileType;
     }
 
-    public void setFileType(String fileType) {
-        this.fileType = fileType;
+    public Long getFileSize() {
+        return fileSize;
     }
 
     public String getFilePath() {
         return filePath;
     }
 
-
+    public Instant getUploadedAt() {
+        return uploadedAt;
+    }
 
     public User getOwner() {
         return owner;
     }
-
-
-
-    public Instant getUploadedAt() {
-        return uploadedAt;
-    }
-    public void setFilePath(String filePath) {
-        this.filePath = filePath;
-    }
-
-    public void assignOwner(User user) {
-        this.owner = user;
-    }
-
-
 }
