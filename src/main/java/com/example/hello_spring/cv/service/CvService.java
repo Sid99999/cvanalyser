@@ -5,6 +5,7 @@ import com.example.hello_spring.cv.dto.FileDownload;
 import com.example.hello_spring.cv.exception.CvAccessDeniedException;
 import com.example.hello_spring.cv.exception.CvNotFoundException;
 import com.example.hello_spring.cv.exception.InvalidFileException;
+import com.example.hello_spring.cv.extraction.service.CvTextExtractionService;
 import com.example.hello_spring.cv.model.Cv;
 import com.example.hello_spring.cv.repository.CvRepository;
 import com.example.hello_spring.model.User;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,9 +38,14 @@ public class CvService {
     );
 
     private final CvRepository cvRepository;
+    private final CvTextExtractionService textExtractionService;
 
-    public CvService(CvRepository cvRepository) {
+    public CvService(
+            CvRepository cvRepository,
+            CvTextExtractionService textExtractionService
+    ) {
         this.cvRepository = cvRepository;
+        this.textExtractionService = textExtractionService;
     }
 
     // =========================
@@ -85,16 +92,34 @@ public class CvService {
                 owner
         );
 
-        // TEMP placeholder — real path is set after file storage
+        // ✅ IMPORTANT: satisfy NOT NULL constraint
         cv.setFilePath("PENDING");
 
+        // 1️⃣ First save (ID generated, DB constraints satisfied)
         Cv savedCv = cvRepository.save(cv);
 
-        return toResponse(savedCv);
+        // 2️⃣ Store file on disk
+        Path path = storeFile(savedCv.getId(), file);
+        savedCv.setFilePath(path.toString());
+
+        // 3️⃣ Extract text
+        String extractedText =
+                textExtractionService.extractText(
+                        path.toFile(),
+                        savedCv.getFileType()
+                );
+
+        savedCv.setExtractedText(extractedText);
+
+        // 4️⃣ Final save
+        Cv finalCv = cvRepository.save(savedCv);
+
+        return toResponse(finalCv);
     }
 
+
     // =========================
-    // DOWNLOAD – OWNER ONLY (PART 5)
+    // DOWNLOAD – OWNER ONLY
     // =========================
     @Transactional(readOnly = true)
     public FileDownload downloadCv(Long cvId, User user) {
@@ -146,6 +171,24 @@ public class CvService {
         cvRepository.delete(cv);
     }
 
+    // =========================
+    // FILE STORAGE HELPERS
+    // =========================
+    private Path storeFile(Long cvId, MultipartFile file) {
+        try {
+            Path directory = Path.of("uploads/cvs");
+            Files.createDirectories(directory);
+
+            Path path = directory.resolve(cvId + "_" + file.getOriginalFilename());
+            Files.write(path, file.getBytes());
+
+            return path;
+
+        } catch (Exception ex) {
+            throw new RuntimeException("Failed to store CV file", ex);
+        }
+    }
+
     private void deleteFileSafely(String filePath) {
         try {
             Path path = Path.of(filePath);
@@ -155,14 +198,13 @@ public class CvService {
             }
 
         } catch (Exception ex) {
-            // VERY IMPORTANT:
-            // If file deletion fails, we abort DB deletion
+            // Abort DB deletion if file deletion fails
             throw new RuntimeException("Failed to delete CV file from disk", ex);
         }
     }
 
     // =========================
-    // FILE VALIDATION (PART 4)
+    // FILE VALIDATION
     // =========================
     private void validateFile(MultipartFile file) {
 

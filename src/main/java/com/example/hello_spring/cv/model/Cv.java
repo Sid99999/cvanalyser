@@ -31,8 +31,22 @@ public class Cv {
     @Column(nullable = false)
     private Long fileSize;
 
+    /**
+     * Absolute or relative path where the file is stored.
+     * AI and extraction logic NEVER read directly from DB blobs.
+     */
     @Column(nullable = false)
     private String filePath;
+
+    /**
+     * Extracted plain text from CV (PDF / DOCX).
+     * - Large content
+     * - Written once
+     * - Read many times
+     * - Nullable for legacy CVs
+     */
+    @Column(columnDefinition = "TEXT")
+    private String extractedText;
 
     // =========================
     // AUDIT
@@ -84,13 +98,26 @@ public class Cv {
     // =========================
     // DOMAIN METHODS
     // =========================
+
+    /**
+     * Set file storage location after physical save.
+     */
     public void setFilePath(String filePath) {
         this.filePath = filePath;
     }
 
+    /**
+     * Persist extracted CV text.
+     * Called exactly once after upload.
+     */
+    public void setExtractedText(String extractedText) {
+        this.extractedText = extractedText;
+    }
+
     // =========================
-    // GETTERS
+    // GETTERS (NO SETTERS FOR CORE FIELDS)
     // =========================
+
     public Long getId() {
         return id;
     }
@@ -113,6 +140,10 @@ public class Cv {
 
     public String getFilePath() {
         return filePath;
+    }
+
+    public String getExtractedText() {
+        return extractedText;
     }
 
     public Instant getUploadedAt() {

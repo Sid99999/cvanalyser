@@ -31,7 +31,7 @@ public class CvAnalysisService {
     }
 
     // =====================================================
-    // PART 1 – Trigger analysis
+    // PART 1 – Trigger analysis (NOW USES EXTRACTED TEXT)
     // =====================================================
     @Transactional
     public CvAnalysisResponse startAnalysis(
@@ -47,12 +47,17 @@ public class CvAnalysisService {
             throw new CvAccessDeniedException("You do not own this CV");
         }
 
+        String cvText = cv.getExtractedText();
+        if (cvText == null || cvText.isBlank()) {
+            throw new InvalidAnalysisStateException(
+                    "CV text has not been extracted yet"
+            );
+        }
+
         CvAnalysis analysis = CvAnalysis.pending(cv);
         CvAnalysis savedAnalysis = cvAnalysisRepository.save(analysis);
 
         try {
-            String cvText = cv.getFilePath();
-
             var result = cvScoringEngine.analyze(
                     cvText,
                     request != null ? request.getJobDescription() : null
@@ -80,7 +85,6 @@ public class CvAnalysisService {
 
     // =====================================================
     // PART 2 – Get analysis by ID
-    // 🔧 PART 5 CHANGE: custom exception
     // =====================================================
     @Transactional(readOnly = true)
     public CvAnalysisResultResponse getAnalysisById(
@@ -107,8 +111,7 @@ public class CvAnalysisService {
     }
 
     // =====================================================
-    // PART 2 – Latest analysis for CV
-    // 🔧 PART 5 CHANGE: clearer empty-history error
+    // PART 2 – Latest analysis for a CV
     // =====================================================
     @Transactional(readOnly = true)
     public CvAnalysisResultResponse getLatestAnalysisForCv(
@@ -141,8 +144,7 @@ public class CvAnalysisService {
     }
 
     // =====================================================
-    // PART 3 – Retry failed analysis
-    // 🔧 PART 5 CHANGE: invalid-state exception
+    // PART 3 – Retry FAILED analysis
     // =====================================================
     @Transactional
     public CvAnalysisResponse retryAnalysis(
@@ -165,12 +167,18 @@ public class CvAnalysisService {
         }
 
         Cv cv = failedAnalysis.getCv();
+
+        String cvText = cv.getExtractedText();
+        if (cvText == null || cvText.isBlank()) {
+            throw new InvalidAnalysisStateException(
+                    "CV text has not been extracted yet"
+            );
+        }
+
         CvAnalysis newAnalysis = CvAnalysis.pending(cv);
         CvAnalysis savedAnalysis = cvAnalysisRepository.save(newAnalysis);
 
         try {
-            String cvText = cv.getFilePath();
-
             var result = cvScoringEngine.analyze(cvText, null);
 
             savedAnalysis.markCompleted(
