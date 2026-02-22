@@ -12,7 +12,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Set;
 
-@Profile("dev")
 @Configuration
 public class DataInitializer {
 
