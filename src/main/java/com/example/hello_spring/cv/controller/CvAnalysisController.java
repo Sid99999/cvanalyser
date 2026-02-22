@@ -2,6 +2,7 @@ package com.example.hello_spring.cv.controller;
 
 import com.example.hello_spring.cv.analysis.service.CvAnalysisService;
 import com.example.hello_spring.cv.dto.*;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -26,7 +27,7 @@ public class CvAnalysisController {
     @PostMapping("/cvs/{cvId}/analysis")
     public ResponseEntity<CvAnalysisResponse> triggerAnalysis(
             @PathVariable Long cvId,
-            @RequestBody(required = false) CvAnalysisRequest request,
+            @Valid @RequestBody(required = false) CvAnalysisRequest request,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         return ResponseEntity

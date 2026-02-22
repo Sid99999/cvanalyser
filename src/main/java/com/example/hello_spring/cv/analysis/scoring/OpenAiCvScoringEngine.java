@@ -4,15 +4,18 @@ import com.example.hello_spring.ai.OpenAiClient;
 import com.example.hello_spring.ai.dto.CvAiAnalysisResponse;
 import com.example.hello_spring.ai.parser.CvAiResponseParser;
 import com.example.hello_spring.ai.prompt.CvAnalysisPromptBuilder;
-import com.example.hello_spring.cv.analysis.model.CvAnalysisResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-
 @Service
-@Profile("ai")
+@Component
 public class OpenAiCvScoringEngine implements CvScoringEngine {
+
+    private static final Logger log =
+            LoggerFactory.getLogger(OpenAiCvScoringEngine.class);
 
     private final OpenAiClient openAiClient;
 
@@ -21,21 +24,28 @@ public class OpenAiCvScoringEngine implements CvScoringEngine {
     }
 
     @Override
-    public CvAnalysisResult analyze(String cvText, String jobDescription) {
+    public CvAiAnalysisResponse analyze(String cvText, String jobDescription) {
 
-        String prompt =
-                CvAnalysisPromptBuilder.build(cvText, jobDescription);
+        log.info("AI scoring started");
 
-        String aiRawResponse = openAiClient.call(prompt);
+        try {
+            String prompt = CvAnalysisPromptBuilder.build(cvText, jobDescription);
 
-        CvAiAnalysisResponse parsed =
-                CvAiResponseParser.parse(aiRawResponse);
+            String aiRawResponse = openAiClient.call(prompt);
 
-        return new CvAnalysisResult(
-                parsed.getOverallScore(),
-                parsed.getStrengths(),
-                parsed.getImprovements(),
-                parsed.getSummary()
-        );
+            log.debug("AI raw response received (length={})",
+                    aiRawResponse != null ? aiRawResponse.length() : 0);
+
+            CvAiAnalysisResponse parsed =
+                    CvAiResponseParser.parse(aiRawResponse);
+
+            log.info("AI scoring completed successfully");
+
+            return parsed;
+
+        } catch (Exception e) {
+            log.error("AI scoring failed", e);
+            throw e;
+        }
     }
 }

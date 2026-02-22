@@ -9,27 +9,28 @@ import com.example.hello_spring.cv.extraction.service.CvTextExtractionService;
 import com.example.hello_spring.cv.model.Cv;
 import com.example.hello_spring.cv.repository.CvRepository;
 import com.example.hello_spring.model.User;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 public class CvService {
 
-    // =========================
-    // FILE VALIDATION RULES
-    // =========================
-    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+    private static final Logger log =
+            LoggerFactory.getLogger(CvService.class);
+
+    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
 
     private static final Set<String> ALLOWED_FILE_TYPES = Set.of(
             "application/pdf",
@@ -37,22 +38,24 @@ public class CvService {
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     );
 
+    private static final Path STORAGE_ROOT = Path.of("uploads/cvs");
+
     private final CvRepository cvRepository;
     private final CvTextExtractionService textExtractionService;
 
-    public CvService(
-            CvRepository cvRepository,
-            CvTextExtractionService textExtractionService
-    ) {
+    public CvService(CvRepository cvRepository,
+                     CvTextExtractionService textExtractionService) {
         this.cvRepository = cvRepository;
         this.textExtractionService = textExtractionService;
     }
 
-    // =========================
-    // READ – GET MY CVS (DTO)
-    // =========================
+    // =====================================================
+    // GET USER CVS
+    // =====================================================
+
     @Transactional(readOnly = true)
     public List<CvResponse> getMyCvs(User user) {
+        log.info("Fetching CV list for user '{}'", user.getUsername());
 
         return cvRepository.findByOwner(user)
                 .stream()
@@ -60,27 +63,16 @@ public class CvService {
                 .toList();
     }
 
-    // =========================
-    // READ – INTERNAL (ENTITY, OWNER ONLY)
-    // =========================
-    @Transactional(readOnly = true)
-    public Cv getMyCvById(Long id, User user) {
+    // =====================================================
+    // UPLOAD CV
+    // =====================================================
 
-        Cv cv = cvRepository.findById(id)
-                .orElseThrow(() -> new CvNotFoundException("CV not found"));
-
-        if (!cv.getOwner().getId().equals(user.getId())) {
-            throw new CvAccessDeniedException("You do not own this CV");
-        }
-
-        return cv;
-    }
-
-    // =========================
-    // CREATE – UPLOAD CV (MULTIPART)
-    // =========================
     @Transactional
-    public CvResponse uploadCv(MultipartFile file, String title, User owner) {
+    public CvResponse uploadCv(MultipartFile file,
+                               String title,
+                               User owner) {
+
+        log.info("User '{}' uploading CV '{}'", owner.getUsername(), title);
 
         validateFile(file);
 
@@ -92,44 +84,36 @@ public class CvService {
                 owner
         );
 
-        // ✅ IMPORTANT: satisfy NOT NULL constraint
-        cv.setFilePath("PENDING");
+        cv.setFilePath("TEMP");
+        Cv saved = cvRepository.save(cv);
 
-        // 1️⃣ First save (ID generated, DB constraints satisfied)
-        Cv savedCv = cvRepository.save(cv);
+        Path storedPath = storeFile(saved.getId(), file);
+        saved.setFilePath(storedPath.toString());
 
-        // 2️⃣ Store file on disk
-        Path path = storeFile(savedCv.getId(), file);
-        savedCv.setFilePath(path.toString());
+        String extractedText = textExtractionService.extractText(
+                storedPath.toFile(),
+                saved.getFileType()
+        );
 
-        // 3️⃣ Extract text
-        String extractedText =
-                textExtractionService.extractText(
-                        path.toFile(),
-                        savedCv.getFileType()
-                );
+        saved.setExtractedText(extractedText);
 
-        savedCv.setExtractedText(extractedText);
+        Cv finalCv = cvRepository.save(saved);
 
-        // 4️⃣ Final save
-        Cv finalCv = cvRepository.save(savedCv);
+        log.info("CV uploaded successfully. id={}", finalCv.getId());
 
         return toResponse(finalCv);
     }
 
+    // =====================================================
+    // DOWNLOAD CV
+    // =====================================================
 
-    // =========================
-    // DOWNLOAD – OWNER ONLY
-    // =========================
     @Transactional(readOnly = true)
-    public FileDownload downloadCv(Long cvId, User user) {
+    public FileDownload downloadCv(Long id, User user) {
 
-        Cv cv = cvRepository.findById(cvId)
-                .orElseThrow(() -> new CvNotFoundException("CV not found"));
+        Cv cv = getOwnedCv(id, user);
 
-        if (!cv.getOwner().getId().equals(user.getId())) {
-            throw new CvAccessDeniedException("You do not own this CV");
-        }
+        log.info("User '{}' downloading CV id={}", user.getUsername(), id);
 
         Path path = Path.of(cv.getFilePath());
 
@@ -147,49 +131,76 @@ public class CvService {
             );
 
         } catch (MalformedURLException e) {
-            throw new RuntimeException("Failed to load CV file", e);
+            log.error("Failed loading file for CV id={}", id, e);
+            throw new RuntimeException("Failed to load file", e);
         }
     }
 
-    // =========================
-    // DELETE – OWNER ONLY
-    // =========================
+    // =====================================================
+    // DELETE CV
+    // =====================================================
+
     @Transactional
     public void delete(Long id, User user) {
+
+        Cv cv = getOwnedCv(id, user);
+
+        log.warn("User '{}' deleting CV id={}", user.getUsername(), id);
+
+        deleteFileSafely(cv.getFilePath());
+        cvRepository.delete(cv);
+    }
+
+    // =====================================================
+    // INTERNAL VALIDATION
+    // =====================================================
+
+    private Cv getOwnedCv(Long id, User user) {
 
         Cv cv = cvRepository.findById(id)
                 .orElseThrow(() -> new CvNotFoundException("CV not found"));
 
         if (!cv.getOwner().getId().equals(user.getId())) {
-            throw new CvAccessDeniedException("You do not own this CV");
+            throw new CvAccessDeniedException("Access denied");
         }
 
-        // 1️⃣ Delete file from disk first
-        deleteFileSafely(cv.getFilePath());
-
-        // 2️⃣ Delete DB record
-        cvRepository.delete(cv);
+        return cv;
     }
 
-    // =========================
-    // FILE STORAGE HELPERS
-    // =========================
-    private Path storeFile(Long cvId, MultipartFile file) {
-        try {
-            Path directory = Path.of("uploads/cvs");
-            Files.createDirectories(directory);
+    // =====================================================
+    // FILE STORAGE
+    // =====================================================
 
-            Path path = directory.resolve(cvId + "_" + file.getOriginalFilename());
+    private Path storeFile(Long cvId, MultipartFile file) {
+
+        try {
+            Files.createDirectories(STORAGE_ROOT);
+
+            String originalName = file.getOriginalFilename();
+
+            if (originalName == null) {
+                throw new InvalidFileException("Invalid file name");
+            }
+
+            String cleanedName = originalName
+                    .replaceAll("[^a-zA-Z0-9.-]", "_");
+            String safeName = cvId + "_" +
+                    UUID.randomUUID() + "_" +
+                    cleanedName;
+            Path path = STORAGE_ROOT.resolve(safeName);
+
             Files.write(path, file.getBytes());
 
             return path;
 
         } catch (Exception ex) {
-            throw new RuntimeException("Failed to store CV file", ex);
+            log.error("File storage failed for CV id={}", cvId, ex);
+            throw new RuntimeException("Failed to store file", ex);
         }
     }
 
     private void deleteFileSafely(String filePath) {
+
         try {
             Path path = Path.of(filePath);
 
@@ -198,14 +209,15 @@ public class CvService {
             }
 
         } catch (Exception ex) {
-            // Abort DB deletion if file deletion fails
-            throw new RuntimeException("Failed to delete CV file from disk", ex);
+            log.error("File deletion failed: {}", filePath, ex);
+            throw new RuntimeException("Failed to delete file", ex);
         }
     }
 
-    // =========================
-    // FILE VALIDATION
-    // =========================
+    // =====================================================
+    // VALIDATION
+    // =====================================================
+
     private void validateFile(MultipartFile file) {
 
         if (file == null || file.isEmpty()) {
@@ -213,17 +225,35 @@ public class CvService {
         }
 
         if (file.getSize() > MAX_FILE_SIZE) {
-            throw new InvalidFileException("File size exceeds 5MB limit");
+            throw new InvalidFileException("File exceeds 5MB limit");
         }
 
-        if (!ALLOWED_FILE_TYPES.contains(file.getContentType())) {
+        String contentType = file.getContentType();
+        if (contentType == null ||
+                !ALLOWED_FILE_TYPES.contains(contentType)) {
             throw new InvalidFileException("Unsupported file type");
+        }
+
+        String originalName = file.getOriginalFilename();
+        if (originalName == null || originalName.isBlank()) {
+            throw new InvalidFileException("Invalid file name");
+        }
+
+        String lower = originalName.toLowerCase();
+
+        if (!(lower.endsWith(".pdf") || lower.endsWith(".docx"))) {
+            throw new InvalidFileException("Only PDF or DOCX files are allowed");
+        }
+
+        if (lower.contains("..") || lower.contains("/")) {
+            throw new InvalidFileException("Invalid file name");
         }
     }
 
-    // =========================
-    // MAPPER – ENTITY → DTO
-    // =========================
+    // =====================================================
+    // MAPPER
+    // =====================================================
+
     private CvResponse toResponse(Cv cv) {
 
         return new CvResponse(
@@ -231,7 +261,6 @@ public class CvService {
                 cv.getTitle(),
                 cv.getFileName(),
                 cv.getFileType(),
-                cv.getFilePath(),
                 cv.getUploadedAt(),
                 cv.getOwner().getId(),
                 cv.getOwner().getUsername()

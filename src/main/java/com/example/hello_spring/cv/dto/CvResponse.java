@@ -1,7 +1,6 @@
 package com.example.hello_spring.cv.dto;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 
 public class CvResponse {
 
@@ -9,30 +8,38 @@ public class CvResponse {
     private String title;
     private String fileName;
     private String fileType;
-    private String filePath;
     private Instant uploadedAt;
 
-    // owner info (SAFE subset)
+    // Owner info (SAFE subset only)
     private Long userId;
     private String username;
 
-    // --- constructors ---
+    // =========================
+    // Constructors
+    // =========================
+
     public CvResponse() {}
 
-    public CvResponse(Long id, String title, String fileName, String fileType,
-                      String filePath, Instant uploadedAt,
-                      Long userId, String username) {
+    public CvResponse(Long id,
+                      String title,
+                      String fileName,
+                      String fileType,
+                      Instant uploadedAt,
+                      Long userId,
+                      String username) {
         this.id = id;
         this.title = title;
         this.fileName = fileName;
         this.fileType = fileType;
-        this.filePath = filePath;
         this.uploadedAt = uploadedAt;
         this.userId = userId;
         this.username = username;
     }
 
-    // --- getters & setters ---
+    // =========================
+    // Getters & Setters
+    // =========================
+
     public Long getId() {
         return id;
     }
@@ -63,14 +70,6 @@ public class CvResponse {
 
     public void setFileType(String fileType) {
         this.fileType = fileType;
-    }
-
-    public String getFilePath() {
-        return filePath;
-    }
-
-    public void setFilePath(String filePath) {
-        this.filePath = filePath;
     }
 
     public Instant getUploadedAt() {

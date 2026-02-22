@@ -2,30 +2,40 @@ package com.example.hello_spring.cv.dto;
 
 import com.example.hello_spring.cv.analysis.model.AnalysisStatus;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 
 public class CvAnalysisHistoryItem {
 
     private Long analysisId;
     private AnalysisStatus status;
-    private Integer score;
-    private Instant createdAt;
+    private Integer finalScore;
+    private LocalDateTime createdAt;
 
     public CvAnalysisHistoryItem(
             Long analysisId,
             AnalysisStatus status,
-            Integer score,
-            Instant createdAt
+            Integer finalScore,
+            LocalDateTime createdAt
     ) {
         this.analysisId = analysisId;
         this.status = status;
-        this.score = score;
+        this.finalScore = finalScore;
         this.createdAt = createdAt;
     }
 
-    public Long getAnalysisId() { return analysisId; }
-    public AnalysisStatus getStatus() { return status; }
-    public Integer getScore() { return score; }
-    public Instant getCreatedAt() { return createdAt; }
-}
+    public Long getAnalysisId() {
+        return analysisId;
+    }
 
+    public AnalysisStatus getStatus() {
+        return status;
+    }
+
+    public Integer getFinalScore() {
+        return finalScore;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+}

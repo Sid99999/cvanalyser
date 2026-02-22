@@ -1,6 +1,6 @@
 package com.example.hello_spring.cv.analysis.scoring;
 
-import com.example.hello_spring.cv.analysis.model.CvAnalysisResult;
+import com.example.hello_spring.ai.dto.*;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
@@ -11,15 +11,24 @@ import java.util.List;
 public class RuleBasedCvScoringEngine implements CvScoringEngine {
 
     @Override
-    public CvAnalysisResult analyze(String cvText, String jobDescription) {
+    public CvAiAnalysisResponse analyze(String cvText, String jobDescription) {
 
-        int score = cvText.length() > 1000 ? 70 : 55;
+        SectionScores scores = new SectionScores(
+                60, // experience
+                55, // projects
+                65, // skills
+                70, // education
+                50  // summary
+        );
 
-        return new CvAnalysisResult(
-                score,
-                List.of("Has core sections"),
-                List.of("Lacks depth in projects"),
-                "Expand project explanations"
+        return new CvAiAnalysisResponse(
+                scores,
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of("Add more technical keywords"),
+                List.of("No measurable achievements"),
+                List.of("Add quantified results")
         );
     }
 }

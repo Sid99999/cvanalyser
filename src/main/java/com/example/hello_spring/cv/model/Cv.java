@@ -4,7 +4,8 @@ import com.example.hello_spring.model.User;
 import jakarta.persistence.*;
 
 import java.time.Instant;
-
+import com.example.hello_spring.cv.analysis.model.CvAnalysis;
+import java.util.List;
 @Entity
 @Table(name = "cvs")
 public class Cv {
@@ -61,6 +62,15 @@ public class Cv {
     @JoinColumn(name = "user_id", nullable = false)
     private User owner;
 
+    // =========================
+// ANALYSIS RELATIONSHIP
+// =========================
+    @OneToMany(
+            mappedBy = "cv",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private List<CvAnalysis> analyses;
     // =========================
     // CONSTRUCTOR (JPA ONLY)
     // =========================

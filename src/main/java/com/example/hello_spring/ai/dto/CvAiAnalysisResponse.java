@@ -1,33 +1,68 @@
 package com.example.hello_spring.ai.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import java.util.List;
-import java.util.Map;
+@JsonIgnoreProperties(ignoreUnknown = true)
 
 public class CvAiAnalysisResponse {
 
-    private int overallScore;
-    private Map<String, Integer> sections;
+    private SectionScores sectionScores;
+    private List<AdditionalSection> additionalSections;
+    private List<String> missingKeywords;
+    private List<String> formattingRedFlags;
     private List<String> strengths;
-    private List<String> improvements;
-    private String summary;
+    private List<String> weaknesses;
+    private List<String> suggestions;
 
-    public int getOverallScore() {
-        return overallScore;
+    // ✅ Required for Jackson
+    public CvAiAnalysisResponse() {
     }
 
-    public Map<String, Integer> getSections() {
-        return sections;
+    // Used by our sanitizer / rule engine
+    public CvAiAnalysisResponse(
+            SectionScores sectionScores,
+            List<AdditionalSection> additionalSections,
+            List<String> missingKeywords,
+            List<String> formattingRedFlags,
+            List<String> strengths,
+            List<String> weaknesses,
+            List<String> suggestions
+    ) {
+        this.sectionScores = sectionScores;
+        this.additionalSections = additionalSections;
+        this.missingKeywords = missingKeywords;
+        this.formattingRedFlags = formattingRedFlags;
+        this.strengths = strengths;
+        this.weaknesses = weaknesses;
+        this.suggestions = suggestions;
+    }
+
+    public SectionScores getSectionScores() {
+        return sectionScores;
+    }
+
+    public List<AdditionalSection> getAdditionalSections() {
+        return additionalSections;
+    }
+
+    public List<String> getMissingKeywords() {
+        return missingKeywords;
+    }
+
+    public List<String> getFormattingRedFlags() {
+        return formattingRedFlags;
     }
 
     public List<String> getStrengths() {
         return strengths;
     }
 
-    public List<String> getImprovements() {
-        return improvements;
+    public List<String> getWeaknesses() {
+        return weaknesses;
     }
 
-    public String getSummary() {
-        return summary;
+    public List<String> getSuggestions() {
+        return suggestions;
     }
 }
