@@ -5,7 +5,7 @@ import { Eye, EyeOff } from "lucide-react";
 
 interface Props {
   value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange: React.ChangeEventHandler<HTMLInputElement>;
   placeholder: string;
 }
 
