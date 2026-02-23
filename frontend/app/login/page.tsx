@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
-
+import PasswordInput from "@/components/PasswordInput";
 export default function LoginPage() {
   const { login } = useAuth();
 
@@ -43,12 +43,10 @@ export default function LoginPage() {
             className="p-3 rounded bg-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
           />
 
-          <input
-            type="password"
+          <PasswordInput
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="p-3 rounded bg-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
           />
 
           <button

@@ -52,12 +52,10 @@ export default function RegisterPage() {
             className="p-3 rounded bg-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
           />
 
-          <input
-            type="password"
+          <PasswordInput
             placeholder="Choose a password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="p-3 rounded bg-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
           />
 
           <button
