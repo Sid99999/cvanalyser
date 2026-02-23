@@ -1,5 +1,15 @@
 # 🚀 CVAnalyser
 
+![Java](https://img.shields.io/badge/Java-21-orange?style=for-the-badge&logo=java)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.x-brightgreen?style=for-the-badge&logo=springboot)
+![Spring Security](https://img.shields.io/badge/Spring_Security-JWT-success?style=for-the-badge&logo=springsecurity)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-blue?style=for-the-badge&logo=postgresql)
+![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=nextdotjs)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)
+![Railway](https://img.shields.io/badge/Railway-Backend-purple?style=for-the-badge&logo=railway)
+![Vercel](https://img.shields.io/badge/Vercel-Frontend-black?style=for-the-badge&logo=vercel)
+![OpenAI](https://img.shields.io/badge/OpenAI-AI_Integration-lightgrey?style=for-the-badge&logo=openai)
+
 AI-powered CV analysis platform that evaluates resumes against job descriptions using OpenAI and ATS-style scoring.
 
 **Live Demo:**  
